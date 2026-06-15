@@ -1,0 +1,16 @@
+node_modules/
+dist/
+
+auth-cache/
+auth-cache-realm/
+
+.env
+.env.local
+
+.claude/
+
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db

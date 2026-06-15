@@ -1,0 +1,39 @@
+{
+  "name": "transferx",
+  "version": "2.0.0",
+  "description": "Detects players inside a Minecraft Bedrock realm and invites them to a server of your choice",
+  "type": "module",
+  "main": "dist/index.js",
+  "keywords": [
+    "minecraft",
+    "bedrock",
+    "realm",
+    "nethernet",
+    "bedrock-portal"
+  ],
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "overrides": {
+    "node-datachannel": "^0.32.3"
+  },
+  "dependencies": {
+    "bedrock-portal": "^2.3.0",
+    "bedrockx": "github:thejfkvis/BedrockX",
+    "chalk": "^5.6.2",
+    "prismarine-auth": "^3.1.1",
+    "prismarine-realms": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
