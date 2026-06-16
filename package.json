@@ -18,7 +18,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "license": "MIT",
   "overrides": {
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
+    "patch-package": "^8.0.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }

@@ -30,7 +30,7 @@ All configuration is read from `.env` (loaded automatically). Defaults are shown
 | Variable | Default | Description |
 | --- | --- | --- |
 | `DISCORD_WEBHOOK_URL` | _(empty)_ | Optional Discord webhook for join/activation notifications. Leave empty to disable. |
-| `REALM_ID` | `32568184` | The numeric id of the realm to listen on. |
+| `REALM_ID` | `00000000` | The numeric id of the realm to listen on. |
 | `SERVER_HOST` | `play.crabsmp.net` | Host that invited players are redirected to. |
 | `SERVER_PORT` | `19132` | Port of the redirect target. |
 | `PORTAL_WORLD_NAME` | `CrabSMP` | Name shown for the portal session in the invite. |

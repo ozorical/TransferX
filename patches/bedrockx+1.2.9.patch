@@ -1,0 +1,70 @@
+diff --git a/node_modules/bedrockx/src/websocket/signal-jsonrpc.js b/node_modules/bedrockx/src/websocket/signal-jsonrpc.js
+index 77aeb8d..3f29c63 100644
+--- a/node_modules/bedrockx/src/websocket/signal-jsonrpc.js
++++ b/node_modules/bedrockx/src/websocket/signal-jsonrpc.js
+@@ -74,7 +74,7 @@ class NethernetJSONRPC extends EventEmitter {
+ 
+     async reconnectWithBackoff() {
+         if (this.retryCount >= MAX_RETRIES) {
+-            this.emit("error", new Error("Signal reconnection failed after max retries"));
++            this.emitErrorSafely(new Error("Signal reconnection failed after max retries"));
+             return;
+         }
+ 
+@@ -114,7 +114,7 @@ class NethernetJSONRPC extends EventEmitter {
+                 }, 2000)
+             }
+         } catch (error) {
+-            this.emit("error", error)
++            this.emitErrorSafely(error)
+         }
+     }
+ 
+@@ -130,8 +130,20 @@ class NethernetJSONRPC extends EventEmitter {
+     }
+ 
+     onError(err) {
+-        console.error(err);
+-        this.client.emit("error", `Signaling WebSocket error`)
++        // NethernetJSONRPC has no `client` reference, so the old
++        // `this.client.emit(...)` threw on every websocket error. Just log it;
++        // the following `close` event drives reconnect/recovery.
++        console.error(`[bedrockx signal] websocket error: ${err?.message ?? err}`)
++    }
++
++    // Never let a missing 'error' listener crash the process. createClient()
++    // wires up this signalling object with a 'signal' listener but no 'error'
++    // listener, so a bare emit('error') is an unhandled error that takes down
++    // the whole Node process. Degrade to a logged warning and let the
++    // higher-level client 'close' handling drive reconnect instead.
++    emitErrorSafely(err) {
++        if (this.listenerCount("error") > 0) this.emit("error", err)
++        else console.error(`[bedrockx signal] ${err.message} (no error listener; staying alive)`)
+     }
+ 
+     async onClose(code, reason) {
+@@ -142,17 +154,20 @@ class NethernetJSONRPC extends EventEmitter {
+ 
+         if (this.destroyed) return
+ 
+-        // 1006 closure
+-        // 1011 error
++        // 1000 normal closure
++        // 1001 going away (signaling server instance shutting down / cycling)
++        // 1006 abnormal closure
++        // 1011 internal server error
++        // 1012 service restart, 1013 try again later
+         // 4401 unauthorized
+-        const retryable = [1000, 1006, 1011, 4401].includes(code) || code === 0
++        const retryable = [1000, 1001, 1006, 1011, 1012, 1013, 4401].includes(code) || code === 0
+ 
+         if (retryable && this.retryCount < MAX_RETRIES) {
+             this.retryCount++
+             await this.destroy(true)
+         } else {
+             await this.destroy(false)
+-            this.emit("error", new Error(`Signal closed: ${code} ${reason}`))
++            this.emitErrorSafely(new Error(`Signal closed: ${code} ${reason}`))
+         }
+     }
+ 
