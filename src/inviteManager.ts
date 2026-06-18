@@ -39,8 +39,17 @@ export class InviteManager {
       logger.success(`Session join: ${gamertag}`)
       void this.webhook.announcePlayerJoin(gamertag, xuid)
     })
+    
+    ;(portal as any).on('error', (error: Error) => {
+      logger.error(`Portal error: ${describeError(error)}`)
+    })
 
-    await portal.start()
+    try {
+      await portal.start()
+    } catch (error) {
+      logger.error(`Failed to start portal: ${describeError(error)}`)
+      throw error
+    }
     this.portal = portal
     logger.success(`Portal live: routing to ${config.serverHost}:${config.serverPort}`)
   }

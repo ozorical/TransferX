@@ -24,6 +24,13 @@ console.error = (...args: any[]): void => {
   logger.error(msg)
 }
 
+process.on('unhandledRejection', (reason) => {
+  logger.error(`Unhandled rejection: ${String(reason)}`)
+})
+process.on('uncaughtException', (error) => {
+  logger.error(`Uncaught exception: ${String(error)}`)
+})
+
 const listener = new TransferX()
 let running = false
 

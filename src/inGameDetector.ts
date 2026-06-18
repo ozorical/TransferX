@@ -90,7 +90,9 @@ export class InGameDetector {
 
     this.client = client
     logger.info(`Realm client connected (networkId ${networkId})`)
-    client.on('error', () => {})
+    client.on('error', (error: Error) => {
+      logger.error(`In-game client error: ${describeError(error)}`)
+    })
     client.on('player_list', (packet: PlayerListPacket) => this.handlePlayerList(packet))
     client.on('start_game', () => {
       this.spawned = true

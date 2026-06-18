@@ -27,8 +27,10 @@
   },
   "dependencies": {
     "bedrock-portal": "^2.4.0",
+    "bedrock-portal-nethernet": "^2.4.0",
     "bedrockx": "github:thejfkvis/BedrockX",
     "chalk": "^5.6.2",
+    "minecraft-data": "^3.111.0",
     "prismarine-auth": "^3.1.1",
     "prismarine-realms": "^1.6.0"
   },
