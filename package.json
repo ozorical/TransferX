@@ -26,7 +26,7 @@
     "node-datachannel": "^0.32.3"
   },
   "dependencies": {
-    "bedrock-portal": "^2.3.0",
+    "bedrock-portal": "^2.4.0",
     "bedrockx": "github:thejfkvis/BedrockX",
     "chalk": "^5.6.2",
     "prismarine-auth": "^3.1.1",

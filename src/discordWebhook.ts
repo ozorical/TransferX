@@ -2,10 +2,14 @@ import { logger } from './logger.js'
 import { describeError } from './util.js'
 
 export class DiscordWebhook {
+  private announced = false
+
   constructor(private readonly url: string) {}
 
   async announceStartup(): Promise<void> {
     if (!this.enabled) return
+    if (this.announced) return
+    this.announced = true
     await this.post({ content: '<a:connected:1475299274249207999> TransferX Activated (in-game detection)' })
   }
 
