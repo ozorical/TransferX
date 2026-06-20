@@ -10,6 +10,7 @@ import { RestFallback } from './restFallback.js'
 export class TransferX {
   private readonly realmApi: RealmApi
   private readonly webhook: DiscordWebhook
+  private invites: InviteManager | null = null
   private detector: InGameDetector | null = null
   private fallback: RestFallback | null = null
 
@@ -29,6 +30,7 @@ export class TransferX {
       this.webhook,
       new Set([detectorXuid, portalXuid]),
     )
+    this.invites = invites
     await invites.start()
     if (!config.dryRun) void this.webhook.announceStartup()
 
@@ -42,8 +44,9 @@ export class TransferX {
     await this.detector.connect()
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.detector?.stop()
     this.fallback?.stop()
+    await this.invites?.stop()
   }
 }

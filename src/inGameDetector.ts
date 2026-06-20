@@ -44,6 +44,8 @@ export class InGameDetector {
   private stopped = false
   private reconnectTimer: NodeJS.Timeout | null = null
   private readonly uuidToXuid = new Map<string, string>()
+  private lastClientError = ''
+  private lastClientErrorAt = 0
 
   constructor(
     private readonly realmApi: RealmApi,
@@ -91,7 +93,15 @@ export class InGameDetector {
     this.client = client
     logger.info(`Realm client connected (networkId ${networkId})`)
     client.on('error', (error: Error) => {
-      logger.error(`In-game client error: ${describeError(error)}`)
+      const msg = describeError(error)
+      const benign = msg.includes('Read error') || msg.includes('Missing characters in string')
+      if (benign) {
+        const now = Date.now()
+        if (msg === this.lastClientError && now - this.lastClientErrorAt < 60_000) return
+        this.lastClientError = msg
+        this.lastClientErrorAt = now
+      }
+      logger.error(`In-game client error: ${msg}`)
     })
     client.on('player_list', (packet: PlayerListPacket) => this.handlePlayerList(packet))
     client.on('start_game', () => {

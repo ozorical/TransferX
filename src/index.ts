@@ -1,6 +1,7 @@
 import { config } from './config.js'
 import { logger } from './logger.js'
 import { TransferX } from './transferX.js'
+import { delay, describeError } from './util.js'
 import readline from 'readline'
 
 const suppressed = [
@@ -33,27 +34,39 @@ process.on('uncaughtException', (error) => {
 
 const listener = new TransferX()
 let running = false
+let startTimer: NodeJS.Timeout | null = null
 
 async function doStart(): Promise<void> {
   if (running) {
     logger.warn('Already started')
     return
   }
-  await listener.start()
-  running = true
+  try {
+    await listener.start()
+    running = true
+  } catch (error) {
+    running = false
+    logger.error(`Start failed: ${describeError(error)}`)
+    if (!startTimer) {
+      startTimer = setTimeout(() => {
+        startTimer = null
+        void doStart()
+      }, config.reconnectDelayMs)
+    }
+  }
 }
 
-function doStop(): void {
+async function doStop(): Promise<void> {
   if (!running) {
     logger.warn('Not running')
     return
   }
-  listener.stop()
+  await listener.stop()
   running = false
 }
 
 async function doRestart(): Promise<void> {
-  doStop()
+  await doStop()
   await doStart()
 }
 
@@ -71,8 +84,11 @@ if (!startedOnce) {
 }
 
 setTimeout(() => {
-  listener.stop()
-  process.exit(0)
+  void (async () => {
+    await doStop()
+    await delay(3000)
+    process.exit(0)
+  })()
 }, config.restartDelayMs)
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' })
@@ -88,13 +104,13 @@ rl.on('line', async (input: string) => {
     } else if (cmd === 'start') {
       await doStart()
     } else if (cmd === 'stop') {
-      doStop()
+      await doStop()
     } else if (cmd === 'restart') {
       await doRestart()
     } else if (cmd === 'reconnect') {
       await doRestart()
     } else if (cmd === 'exit' || cmd === 'quit') {
-      doStop()
+      await doStop()
       rl.close()
       process.exit(0)
     } else {

@@ -1,0 +1,78 @@
+diff --git a/node_modules/bedrock-portal-nethernet/dist/signaling/signal.js b/node_modules/bedrock-portal-nethernet/dist/signaling/signal.js
+index b2ffc07..e75e092 100644
+--- a/node_modules/bedrock-portal-nethernet/dist/signaling/signal.js
++++ b/node_modules/bedrock-portal-nethernet/dist/signaling/signal.js
+@@ -82,7 +82,22 @@ class Signal extends events_1.EventEmitter {
+         if (this.ws?.readyState === ws_1.WebSocket.OPEN)
+             throw new Error('Already connected signaling server');
+         await this.init();
+-        await (0, events_1.once)(this, 'credentials');
++        await new Promise((resolve, reject) => {
++            const onCredentials = () => {
++                cleanup();
++                resolve();
++            };
++            const onConnectError = (err) => {
++                cleanup();
++                reject(err instanceof Error ? err : new Error(String(err)));
++            };
++            const cleanup = () => {
++                this.off('credentials', onCredentials);
++                this.off('connectError', onConnectError);
++            };
++            this.once('credentials', onCredentials);
++            this.once('connectError', onConnectError);
++        });
+     }
+     async destroy(resume = false) {
+         debug('Disconnecting from Signal');
+@@ -141,6 +156,7 @@ class Signal extends events_1.EventEmitter {
+         this.ws = ws;
+     }
+     onOpen() {
++        this.retryCount = 0;
+         debug('Signal Connected to Signal');
+         this.rpc.timeout(15000).request(TURN_AUTH_METHOD, {}, undefined)
+             .then(res => {
+@@ -164,25 +180,24 @@ class Signal extends events_1.EventEmitter {
+             clearInterval(this.pingInterval);
+             this.pingInterval = null;
+         }
+-        if (code === 1006) {
+-            debug('Signal Connection Closed Unexpectedly');
+-            if (this.retryCount < 5) {
+-                this.retryCount++;
+-                void this.destroy(true).catch((err) => {
+-                    debug('Signal reconnect failed', err);
+-                    this.emitConnectError(err);
+-                });
+-            }
+-            else {
+-                void this.destroy().catch((err) => {
+-                    debug('Signal destroy failed', err);
+-                });
+-                this.emitConnectError(new Error('Signal Connection Closed Unexpectedly'));
+-            }
++        const retryable = [1000, 1001, 1006, 1011, 1012, 1013, 4401].includes(code) || code === 0;
++        if (retryable && this.retryCount < 5) {
++            if (code === 1006)
++                debug('Signal Connection Closed Unexpectedly');
++            this.retryCount++;
++            void this.destroy(true).catch((err) => {
++                debug('Signal reconnect failed', err);
++                this.emitConnectError(err);
++            });
+             return;
+         }
+-        if (!this.credentials && code !== 1000) {
+-            this.emitConnectError(new Error(`Signal connection closed before credentials with code ${code} and reason ${reason}`));
++        if (code !== 1000) {
++            void this.destroy().catch((err) => {
++                debug('Signal destroy failed', err);
++            });
++            this.emitConnectError(code === 1006
++                ? new Error('Signal Connection Closed Unexpectedly')
++                : new Error(`Signal connection closed with code ${code} and reason ${reason}`));
+         }
+     }
+     onMessage(res) {
