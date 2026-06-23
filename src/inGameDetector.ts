@@ -44,8 +44,7 @@ export class InGameDetector {
   private stopped = false
   private reconnectTimer: NodeJS.Timeout | null = null
   private readonly uuidToXuid = new Map<string, string>()
-  private lastClientError = ''
-  private lastClientErrorAt = 0
+  private everConnected = false
 
   constructor(
     private readonly realmApi: RealmApi,
@@ -53,6 +52,7 @@ export class InGameDetector {
     private readonly selfXuid: string,
     private readonly invites: InviteManager,
     private readonly hooks: DetectorHooks,
+    private readonly silent = false,
   ) {}
 
   async connect(): Promise<void> {
@@ -71,7 +71,9 @@ export class InGameDetector {
       return
     }
 
-    logger.warn(`Joining realm in-game (networkId ${networkId})`)
+    const shouldLog = !this.everConnected && !this.silent
+    this.everConnected = true
+    if (shouldLog) logger.warn(`Joining realm in-game (networkId ${networkId})`)
     this.downHandled = false
     this.spawned = false
 
@@ -91,16 +93,10 @@ export class InGameDetector {
     }
 
     this.client = client
-    logger.info(`Realm client connected (networkId ${networkId})`)
+    if (shouldLog) logger.info(`Realm client connected (networkId ${networkId})`)
     client.on('error', (error: Error) => {
       const msg = describeError(error)
-      const benign = msg.includes('Read error') || msg.includes('Missing characters in string')
-      if (benign) {
-        const now = Date.now()
-        if (msg === this.lastClientError && now - this.lastClientErrorAt < 60_000) return
-        this.lastClientError = msg
-        this.lastClientErrorAt = now
-      }
+      if (msg.includes('Read error') || msg.includes('Missing characters in string')) return
       logger.error(`In-game client error: ${msg}`)
     })
     client.on('player_list', (packet: PlayerListPacket) => this.handlePlayerList(packet))

@@ -1,8 +1,13 @@
+import { existsSync, writeFileSync } from 'fs'
 import { config } from './config.js'
 import { logger } from './logger.js'
 import { TransferX } from './transferX.js'
 import { delay, describeError } from './util.js'
 import readline from 'readline'
+
+const MARKER = './session.marker'
+const isRestart = existsSync(MARKER)
+writeFileSync(MARKER, String(process.pid))
 
 const suppressed = [
   'Received answer for closed connection, ignoring',
@@ -25,15 +30,32 @@ console.error = (...args: any[]): void => {
   logger.error(msg)
 }
 
-process.on('unhandledRejection', (reason) => {
-  logger.error(`Unhandled rejection: ${String(reason)}`)
-})
-process.on('uncaughtException', (error) => {
-  logger.error(`Uncaught exception: ${String(error)}`)
-})
+const suppressedExceptions = [
+  'unexpected end of file',
+  'Missing characters in string',
+  'Read error',
+  'Invalid promised segments',
+]
+
+let lastExceptionMsg = ''
+let lastExceptionAt = 0
+
+const handleException = (prefix: string, value: unknown): void => {
+  const msg = String(value)
+  if (suppressedExceptions.some((s) => msg.includes(s))) return
+  const now = Date.now()
+  if (msg === lastExceptionMsg && now - lastExceptionAt < 60_000) return
+  lastExceptionMsg = msg
+  lastExceptionAt = now
+  logger.error(`${prefix}: ${msg}`)
+}
+
+process.on('unhandledRejection', (reason) => handleException('Unhandled rejection', reason))
+process.on('uncaughtException', (error) => handleException('Uncaught exception', error))
 
 const listener = new TransferX()
 let running = false
+let hasStarted = false
 let startTimer: NodeJS.Timeout | null = null
 
 async function doStart(): Promise<void> {
@@ -41,9 +63,11 @@ async function doStart(): Promise<void> {
     logger.warn('Already started')
     return
   }
+  const silent = isRestart || hasStarted
   try {
-    await listener.start()
+    await listener.start(silent)
     running = true
+    hasStarted = true
   } catch (error) {
     running = false
     logger.error(`Start failed: ${describeError(error)}`)
@@ -70,10 +94,10 @@ async function doRestart(): Promise<void> {
   await doStart()
 }
 
-let startedOnce = false
 await doStart()
-if (!startedOnce) {
-  startedOnce = true
+if (isRestart) {
+  logger.info('Session restarted')
+} else {
   logger.banner([
     '  ______                      ____         _  __',
     ' /_  __/________ _____  _____/ __/__  ____| |/ /',

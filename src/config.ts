@@ -19,7 +19,7 @@ export const config = {
   realmId: process.env.REALM_ID ?? '32568184',
   serverHost: process.env.SERVER_HOST ?? 'play.crabsmp.net',
   serverPort: Number(process.env.SERVER_PORT ?? '19132'),
-  minecraftVersion: '1.26.30',
+  minecraftVersion: '1.26.31',
   protocolVersion: 1001,
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? '',
   portalWorldName: process.env.PORTAL_WORLD_NAME ?? 'CrabSMP',

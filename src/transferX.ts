@@ -19,27 +19,27 @@ export class TransferX {
     this.webhook = new DiscordWebhook(config.discordWebhookUrl)
   }
 
-  async start(): Promise<void> {
-    logger.info('Authenticating')
+  async start(silent = false): Promise<void> {
+    if (!silent) logger.info('Authenticating')
     const detectorXuid = String((await detectorAuthflow.getXboxToken('http://xboxlive.com')).userXUID)
     const portalXuid = String((await portalAuthflow.getXboxToken('http://xboxlive.com')).userXUID)
-    logger.success(`In-game detector account XUID ${detectorXuid}${config.dryRun ? ' (dry run)' : ''}`)
+    if (!silent) logger.success(`In-game detector account XUID ${detectorXuid}${config.dryRun ? ' (dry run)' : ''}`)
 
     const invites = new InviteManager(
       new XboxProfile(portalAuthflow),
       this.webhook,
       new Set([detectorXuid, portalXuid]),
+      silent,
     )
     this.invites = invites
     await invites.start()
-    if (!config.dryRun) void this.webhook.announceStartup()
 
     const fallback = new RestFallback(this.realmApi, detectorXuid, invites)
     this.fallback = fallback
     this.detector = new InGameDetector(this.realmApi, detectorAuthflow, detectorXuid, invites, {
       onLive: () => fallback.stop(),
       onDown: () => fallback.start(),
-    })
+    }, silent)
 
     await this.detector.connect()
   }

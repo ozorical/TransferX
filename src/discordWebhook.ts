@@ -6,13 +6,6 @@ export class DiscordWebhook {
 
   constructor(private readonly url: string) {}
 
-  async announceStartup(): Promise<void> {
-    if (!this.enabled) return
-    if (this.announced) return
-    this.announced = true
-    await this.post({ content: '<a:connected:1475299274249207999> TransferX Activated (in-game detection)' })
-  }
-
   async announcePlayerJoin(gamertag: string, xuid: string): Promise<void> {
     if (!this.enabled) return
 

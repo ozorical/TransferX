@@ -11,11 +11,13 @@ export class InviteManager {
   private starting = false
   private stopped = false
   private restartTimer: NodeJS.Timeout | null = null
+  private everLive = false
 
   constructor(
     private readonly profile: XboxProfile,
     private readonly webhook: DiscordWebhook,
     private readonly blocked: Set<string>,
+    private readonly silent = false,
   ) {}
 
   async start(): Promise<void> {
@@ -115,7 +117,9 @@ export class InviteManager {
       const portal = this.createPortal()
       await portal.start()
       this.portal = portal
-      logger.success(`Portal live: routing to ${config.serverHost}:${config.serverPort}`)
+      const shouldLog = !this.everLive && !this.silent
+      this.everLive = true
+      if (shouldLog) logger.success(`Portal live: routing to ${config.serverHost}:${config.serverPort}`)
     } catch (error) {
       logger.error(`Failed to start portal: ${describeError(error)}`)
       const wait = Math.min(config.reconnectDelayMs * Math.max(1, attempt + 1), 60_000)
